@@ -16,30 +16,12 @@
 
 package org.springframework.cloud.openfeign;
 
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import feign.Request;
-
 import org.springframework.aop.scope.ScopedProxyUtils;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.annotation.AnnotatedGenericBeanDefinition;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.config.BeanDefinitionHolder;
-import org.springframework.beans.factory.config.BeanExpressionContext;
-import org.springframework.beans.factory.config.BeanExpressionResolver;
-import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.beans.factory.config.*;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionReaderUtils;
@@ -57,6 +39,12 @@ import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
+
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.*;
 
 /**
  * @author Spencer Gibb
@@ -145,10 +133,13 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 		this.resourceLoader = resourceLoader;
 	}
 
+	// 重写 registerBeanDefinitions 方法
 	@Override
 	public void registerBeanDefinitions(AnnotationMetadata metadata, BeanDefinitionRegistry registry) {
-		registerDefaultConfiguration(metadata, registry);
-		registerFeignClients(metadata, registry);
+		registerDefaultConfiguration(metadata, registry); // 注册全局配置，如果 EnableFeignClients
+															// 注解上配置了 defaultConfiguration
+															// 属性
+		registerFeignClients(metadata, registry); // 注册 FeignClients
 	}
 
 	private void registerDefaultConfiguration(AnnotationMetadata metadata, BeanDefinitionRegistry registry) {
@@ -174,7 +165,7 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 		if (clients == null || clients.length == 0) {
 			ClassPathScanningCandidateComponentProvider scanner = getScanner();
 			scanner.setResourceLoader(this.resourceLoader);
-			scanner.addIncludeFilter(new AnnotationTypeFilter(FeignClient.class));
+			scanner.addIncludeFilter(new AnnotationTypeFilter(FeignClient.class)); // 扫描类路径上标记 @FeignClient 注解的接口，根据 @EnableFeignClients 注解上的配置，并循环注册 FeignClient
 			Set<String> basePackages = getBasePackages(metadata);
 			for (String basePackage : basePackages) {
 				candidateComponents.addAll(scanner.findCandidateComponents(basePackage));
@@ -185,7 +176,7 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 				candidateComponents.add(new AnnotatedGenericBeanDefinition(clazz));
 			}
 		}
-
+		// 循环注册 FeignClient
 		for (BeanDefinition candidateComponent : candidateComponents) {
 			if (candidateComponent instanceof AnnotatedBeanDefinition) {
 				// verify annotated class is an interface
@@ -203,16 +194,16 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 			}
 		}
 	}
-
+	// 将 FeignClient 注解上的属性信息，封装到 BeanDefinition 中，并注册到 Spring 容器中
 	private void registerFeignClient(BeanDefinitionRegistry registry, AnnotationMetadata annotationMetadata,
 			Map<String, Object> attributes) {
 		String className = annotationMetadata.getClassName();
-		Class clazz = ClassUtils.resolveClassName(className, null);
+		Class clazz = ClassUtils.resolveClassName(className, null); // 标注了 @FeignClient 的 Class
 		ConfigurableBeanFactory beanFactory = registry instanceof ConfigurableBeanFactory
 				? (ConfigurableBeanFactory) registry : null;
 		String contextId = getContextId(beanFactory, attributes);
 		String name = getName(attributes);
-		FeignClientFactoryBean factoryBean = new FeignClientFactoryBean();
+		FeignClientFactoryBean factoryBean = new FeignClientFactoryBean(); // 真实注册的是 FeignClientFactoryBean，它实现了 FactoryBean 接口，表明这是一个工厂 bean，用于创建代理 Bean
 		factoryBean.setBeanFactory(beanFactory);
 		factoryBean.setName(name);
 		factoryBean.setContextId(contextId);

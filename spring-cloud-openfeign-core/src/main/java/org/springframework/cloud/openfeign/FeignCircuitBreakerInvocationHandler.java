@@ -86,7 +86,7 @@ class FeignCircuitBreakerInvocationHandler implements InvocationHandler {
 		else if ("toString".equals(method.getName())) {
 			return toString();
 		}
-
+		//核心方法位置，在此，则实现把客户端请求封装为 CircuitBreaker +  fallbackFunction 的方式进行调用，实现了调用的熔断与降级
 		String circuitName = circuitBreakerNameResolver.resolveCircuitBreakerName(feignClientName, target, method);
 		CircuitBreaker circuitBreaker = circuitBreakerGroupEnabled ? factory.create(circuitName, feignClientName)
 				: factory.create(circuitName);

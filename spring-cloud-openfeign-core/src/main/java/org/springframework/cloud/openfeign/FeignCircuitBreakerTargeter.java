@@ -41,10 +41,10 @@ class FeignCircuitBreakerTargeter implements Targeter {
 	@Override
 	public <T> T target(FeignClientFactoryBean factory, Feign.Builder feign, FeignContext context,
 			Target.HardCodedTarget<T> target) {
-		if (!(feign instanceof FeignCircuitBreaker.Builder)) {
+		if (!(feign instanceof FeignCircuitBreaker.Builder)) { 	// Feign 实例不是 FeignCircuitBreaker.Builder 的则忽略，调用原生的构建方法
 			return feign.target(target);
 		}
-		FeignCircuitBreaker.Builder builder = (FeignCircuitBreaker.Builder) feign;
+		FeignCircuitBreaker.Builder builder = (FeignCircuitBreaker.Builder) feign; 	// 以下方法则使用 FeignCircuitBreaker Builder （自定义了构建实际代理对象 FeignCircuitBreakerInvocationHandler）构建一个执行处理器
 		String name = !StringUtils.hasText(factory.getContextId()) ? factory.getName() : factory.getContextId();
 		Class<?> fallback = factory.getFallback();
 		if (fallback != void.class) {

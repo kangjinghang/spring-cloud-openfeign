@@ -106,7 +106,7 @@ public class FeignAutoConfiguration {
 	public HasFeatures feignFeature() {
 		return HasFeatures.namedFeature("Feign", Feign.class);
 	}
-
+	/* FeignContext 继承自NamedContextFactory，可以用此对象根据 Bean 名字或者对象获取到实例 */
 	@Bean
 	public FeignContext feignContext() {
 		FeignContext context = new FeignContext();
@@ -151,7 +151,7 @@ public class FeignAutoConfiguration {
 		}
 
 	}
-
+	/* 默认引入的包依赖已带此类，所以默认使用的 Targeter 是 这个带熔断的 FeignCircuitBreakerTargeter */
 	@Configuration(proxyBeanMethods = false)
 	@ConditionalOnClass(CircuitBreaker.class)
 	@ConditionalOnProperty(value = "spring.cloud.openfeign.circuitbreaker.enabled", havingValue = "true")

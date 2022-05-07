@@ -96,13 +96,13 @@ public class FeignClientsConfiguration {
 
 	@Autowired(required = false)
 	private FeignEncoderProperties encoderProperties;
-
+	// 默认 Decoder
 	@Bean
 	@ConditionalOnMissingBean
 	public Decoder feignDecoder(ObjectProvider<HttpMessageConverterCustomizer> customizers) {
 		return new OptionalDecoder(new ResponseEntityDecoder(new SpringDecoder(messageConverters, customizers)));
 	}
-
+	// 默认 Encoder
 	@Bean
 	@ConditionalOnMissingBean
 	@ConditionalOnMissingClass("org.springframework.data.domain.Pageable")
@@ -139,7 +139,7 @@ public class FeignClientsConfiguration {
 		}
 		return queryMapEncoder;
 	}
-
+	// 默认 Contract
 	@Bean
 	@ConditionalOnMissingBean
 	public Contract feignContract(ConversionService feignConversionService) {

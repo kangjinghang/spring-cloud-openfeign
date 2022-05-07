@@ -43,7 +43,7 @@ import static org.springframework.cloud.openfeign.support.FeignUtils.getHttpHead
  * @author Spencer Gibb
  * @author Olga Maciaszek-Sharma
  */
-public class SpringDecoder implements Decoder {
+public class SpringDecoder implements Decoder {  // 基于 SpringMVC HttpMessageConverters 机制实现的转换协议
 
 	private final ObjectFactory<HttpMessageConverters> messageConverters;
 

@@ -16,37 +16,16 @@
 
 package org.springframework.cloud.openfeign;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.TimeUnit;
-
-import feign.Capability;
-import feign.Client;
-import feign.Contract;
-import feign.ExceptionPropagationPolicy;
-import feign.Feign;
-import feign.Logger;
-import feign.QueryMapEncoder;
-import feign.Request;
-import feign.RequestInterceptor;
-import feign.Retryer;
+import feign.*;
 import feign.Target.HardCodedTarget;
 import feign.codec.Decoder;
 import feign.codec.Encoder;
 import feign.codec.ErrorDecoder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.BeanFactory;
-import org.springframework.beans.factory.BeanFactoryAware;
-import org.springframework.beans.factory.FactoryBean;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.beans.factory.*;
 import org.springframework.cloud.openfeign.clientconfig.FeignClientConfigurer;
 import org.springframework.cloud.openfeign.loadbalancer.FeignBlockingLoadBalancerClient;
 import org.springframework.cloud.openfeign.loadbalancer.RetryableFeignBlockingLoadBalancerClient;
@@ -55,6 +34,9 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Spencer Gibb
@@ -80,7 +62,7 @@ public class FeignClientFactoryBean
 	 ***********************************/
 
 	private static Log LOG = LogFactory.getLog(FeignClientFactoryBean.class);
-
+	// 标注了 @FeignClient 的 Class
 	private Class<?> type;
 
 	private String name;
@@ -127,9 +109,9 @@ public class FeignClientFactoryBean
 		Feign.Builder builder = get(context, Feign.Builder.class)
 				// required values
 				.logger(logger)
-				.encoder(get(context, Encoder.class))
-				.decoder(get(context, Decoder.class))
-				.contract(get(context, Contract.class));
+				.encoder(get(context, Encoder.class)) // 设置 Encoder
+				.decoder(get(context, Decoder.class)) // 设置 Decoder
+				.contract(get(context, Contract.class));  // 设置 Contract
 		// @formatter:on
 
 		configureFeign(context, builder);
@@ -347,9 +329,9 @@ public class FeignClientFactoryBean
 		}
 		return instance;
 	}
-
+	// 根据 contextId 获取一个子上下文，然后从这个子上下文中查找Client bean
 	protected <T> T getOptional(FeignContext context, Class<T> type) {
-		return context.getInstance(contextId, type);
+		return context.getInstance(contextId, type); // SpringCloud 会为每一个 feignClient 创建一个子上下文，然后存入以 contextId 为 key 的 map 中，详见 NamedContextFactory的getContext 方法
 	}
 
 	protected <T> T getInheritedAwareOptional(FeignContext context, Class<T> type) {
@@ -371,11 +353,11 @@ public class FeignClientFactoryBean
 	}
 
 	protected <T> T loadBalance(Feign.Builder builder, FeignContext context, HardCodedTarget<T> target) {
-		Client client = getOptional(context, Client.class);
+		Client client = getOptional(context, Client.class); // 此处会返回 LoadBalancerFeignClient 这个Client
 		if (client != null) {
 			builder.client(client);
 			applyBuildCustomizers(context, builder);
-			Targeter targeter = get(context, Targeter.class);
+			Targeter targeter = get(context, Targeter.class); // 默认返回的是 DefaultTargeter
 			return targeter.target(this, builder, context, target);
 		}
 
@@ -396,7 +378,7 @@ public class FeignClientFactoryBean
 		}
 		return null;
 	}
-
+	// 核心方法 getObject
 	@Override
 	public Object getObject() {
 		return getTarget();
@@ -409,9 +391,9 @@ public class FeignClientFactoryBean
 	 */
 	<T> T getTarget() {
 		FeignContext context = beanFactory != null ? beanFactory.getBean(FeignContext.class)
-				: applicationContext.getBean(FeignContext.class);
-		Feign.Builder builder = feign(context);
-
+				: applicationContext.getBean(FeignContext.class); // 获取 FeignContext 这个Bean，这个 bean 是在哪里注册的呢？是在 FeignAutoConfiguration 中注册的
+		Feign.Builder builder = feign(context); // 创建 feign 建造者 Feign.Builder
+		// 判断 url 属性是否为空，如果不为空，则生成默认的代理类；如果为空，则走负载均衡，生成带有负载均衡的代理类
 		if (!StringUtils.hasText(url)) {
 
 			if (LOG.isInfoEnabled()) {
@@ -424,13 +406,13 @@ public class FeignClientFactoryBean
 				url = name;
 			}
 			url += cleanPath();
-			return (T) loadBalance(builder, context, new HardCodedTarget<>(type, name, url));
+			return (T) loadBalance(builder, context, new HardCodedTarget<>(type, name, url)); // HardCodedTarget
 		}
-		if (StringUtils.hasText(url) && !url.startsWith("http")) {
+		if (StringUtils.hasText(url) && !url.startsWith("http")) { // 处理 @FeignClient URL属性(主机名)存在的情况
 			url = "http://" + url;
 		}
 		String url = this.url + cleanPath();
-		Client client = getOptional(context, Client.class);
+		Client client = getOptional(context, Client.class); // 获取到调用客户端：Spring封装了基于 LB 的客户端（FeignBlockingLoadBalancerClient）
 		if (client != null) {
 			if (client instanceof FeignBlockingLoadBalancerClient) {
 				// not load balancing because we have a url,
@@ -442,11 +424,11 @@ public class FeignClientFactoryBean
 				// but Spring Cloud LoadBalancer is on the classpath, so unwrap
 				client = ((RetryableFeignBlockingLoadBalancerClient) client).getDelegate();
 			}
-			builder.client(client);
+			builder.client(client); // 设置调用客户端
 		}
 
 		applyBuildCustomizers(context, builder);
-
+		// DefaultTargeter 或者 FeignCircuitBreakerTargeter，其中 FeignCircuitBreakerTargeter 带熔断和降级功能，主要用在 Builder 中配置调用失败回调方法
 		Targeter targeter = get(context, Targeter.class);
 		return (T) targeter.target(this, builder, context, new HardCodedTarget<>(type, name, url));
 	}

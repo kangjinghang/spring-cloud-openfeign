@@ -66,7 +66,7 @@ import static org.springframework.http.MediaType.MULTIPART_RELATED;
  * @author Can Bezmen
  */
 @SuppressWarnings("rawtypes")
-public class SpringEncoder implements Encoder {
+public class SpringEncoder implements Encoder {  // 基于 SpringMVC HttpMessageConverters 机制实现的转换协议
 
 	private static final Log log = LogFactory.getLog(SpringEncoder.class);
 
